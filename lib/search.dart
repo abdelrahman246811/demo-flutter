@@ -10,11 +10,11 @@ class SearchForm extends StatefulWidget {
 
 class _SearchFormState extends State<SearchForm> {
   final DatabaseHelper dbHelper = DatabaseHelper();
-  
+
   // All possible tables
   final List<String> _allTables = [
-    'Steinbruch', 'Vormahlung', 'Ofen', 
-    'MaterialEigenschaften', 'Nachmahlung', 
+    'Steinbruch', 'Vormahlung', 'Ofen',
+    'MaterialEigenschaften', 'Nachmahlung',
     'MoertelZusammensetzung', 'BetonZusammensetzung'
   ];
 
@@ -114,7 +114,7 @@ class _SearchFormState extends State<SearchForm> {
           _allSearchFields[field.name] = [];
         }
         _allSearchFields[field.name]!.add(field);
-        
+
         // Initialize selection and controller for each field
         _selectedFields[field.name] = false;
         _fieldControllers[field.name] = TextEditingController();
@@ -131,7 +131,7 @@ Future<void> _performCrossTableSearch() async {
     if (isSelected && _fieldControllers[fieldName]!.text.isNotEmpty) {
       searchColumns.add(fieldName);
       dynamic value = _fieldControllers[fieldName]!.text;
-      
+
       // Convert number strings to proper numeric types
 if (_tableFields.values
     .expand((fields) => fields)
@@ -142,7 +142,7 @@ if (_tableFields.values
     value = parsedValue;  // only update if parsing succeeded
   }
 }
-      
+
       searchValues.add(value);
     }
   });
@@ -155,9 +155,9 @@ if (_tableFields.values
   }
 
   try {
-    final results = await dbHelper.searchAcrossTables(
-      searchColumns,
-      searchValues,
+    final results = await dbHelper.getJoinedData(
+      // searchColumns,
+      // searchValues,
     );
 
     setState(() {
@@ -283,14 +283,14 @@ String _getDisplayLabel(String columnName) {
   //     scrollDirection: Axis.horizontal,
   //     child: DataTable(
   //       columns: [
-  //         ...displayedColumns.map((col) => 
+  //         ...displayedColumns.map((col) =>
   //           DataColumn(label: Text(col))
   //         ).toList(),
   //       ],
   //       rows: _searchResults.map((result) {
   //         return DataRow(
   //           cells: [
-  //             ...displayedColumns.map((col) => 
+  //             ...displayedColumns.map((col) =>
   //               DataCell(Text(result[col]?.toString() ?? 'N/A'))
   //             ).toList(),
   //           ],

@@ -41,7 +41,7 @@ class DatabaseHelper {
               s_asbest_analyse TEXT,
               s_dichte REAL,
               s_transport TEXT
-          )
+          );
         ''');
         await db.execute('''
           CREATE TABLE Vormahlung (
@@ -449,14 +449,14 @@ class DatabaseHelper {
 
   Future<int> insertBetonZusammensetzung(BetonZusammensetzung betonZusammensetzung) async {
   final db = await database;
-  
+
   // Insert the BetonZusammensetzung record
   final id = await db.insert(
     'BetonZusammensetzung',
     betonZusammensetzung.toMap(),
     conflictAlgorithm: ConflictAlgorithm.replace
   );
-  
+
   // Get the related MoertelZusammensetzung record
   final moertelZusammensetzung = await db.query(
     'MoertelZusammensetzung',
@@ -464,7 +464,7 @@ class DatabaseHelper {
     whereArgs: [betonZusammensetzung.moertelZusammensetzungId],
     limit: 1
   );
-  
+
   if (moertelZusammensetzung.isNotEmpty) {
     // Update any related fields if needed
     final bindemittel = '${moertelZusammensetzung.first['mz_bindemittel']}-${moertelZusammensetzung.first['mz_serie']}';
@@ -475,14 +475,14 @@ class DatabaseHelper {
       whereArgs: [id]
     );
   }
-  
+
   return id;
 }
 
 Future<List<BetonZusammensetzung>> getBetonZusammensetzung() async {
   final db = await database;
   final List<Map<String, dynamic>> maps = await db.query('BetonZusammensetzung');
-  
+
   return List.generate(maps.length, (i) {
     return BetonZusammensetzung(
       b_id: maps[i]['b_id'] as int,
@@ -508,146 +508,25 @@ Future<void> deleteBetonZusammensetzung(int id) async {
   );
 }
 
-Future<List<Map<String, dynamic>>> searchTable(
-  String tableName, 
-  List<String> columns, 
-  List<dynamic> values,
-  List<String> whereConditions
-) async {
-  Database db = await database;
-  String whereClause = whereConditions.join(' AND ');
-  
-  try {
-    List<Map<String, dynamic>> results = await db.query(
-      tableName,
-      where: whereClause,
-      whereArgs: values,
-    );
-    
-    return results;
-  } catch (e) {
-    print('Error searching table $tableName: $e');
-    rethrow;
-  }
+Future<List<Map<String, dynamic>>> getJoinedData() async {
+  final db = await database;
+  return await db.rawQuery('''
+    SELECT
+        s.s_id, s.s_name, s.s_menge, s.s_korngroesse, s.s_asbest_analyse, s.s_dichte, s.s_transport,
+        v.v_id, v.v_charge, v.v_erledigt, v.v_muehle_typ, v.v_mahl_dauer, v.v_grad, v.v_dichte, v.v_feinheit,
+        o.o_id, o.o_charge, o.o_info, o.o_durchsatz, o.o_neigung, o.o_rotation, o.o_heiztemperatur, o.o_luftvolumen, o.o_faesser, o.o_gluehverlust,
+        me.me_id, me.me_charge, me.me_dichte, me.me_feinheit, me.me_dca, me.me_xrd,
+        n.n_id, n.n_charge, n.n_erledigt, n.n_muehle_typ, n.n_mahl_dauer, n.n_grad, n.n_dichte, n.n_feinheit, n.n_gluehverlust, n.n_dca, n.n_xrd,
+        mz.mz_id, mz.mz_serie, mz.mz_bindemittel, mz.mz_bindemittelgehalt, mz.mz_wasser, mz.mz_w_bm_wert, mz.mz_fliessmittel, mz.mz_druckfestigkeit_7d,
+        b.b_id, b.b_serie, b.b_bindemittel, b.b_bindemittelgehalt, b.b_wasser, b.b_w_bm_wert, b.b_fliessmittel, b.b_sieblinie, b.b_druckfestigkeit
+    FROM Steinbruch s
+    LEFT JOIN Vormahlung v ON s.s_id = v.steinbruch_id
+    LEFT JOIN Ofen o ON v.v_id = o.vormahlung_id
+    LEFT JOIN MaterialEigenschaften me ON o.o_id = me.ofen_id
+    LEFT JOIN Nachmahlung n ON me.me_id = n.material_eigenschaften_id
+    LEFT JOIN MoertelZusammensetzung mz ON n.n_id = mz.nachmahlung_id
+    LEFT JOIN BetonZusammensetzung b ON mz.mz_id = b.moertel_zusammensetzung_id;
+  ''');
 }
 
-  Future<List<Map<String, dynamic>>> searchAcrossTables(
-    List<String> searchColumns,
-    List<dynamic> searchValues,
-  ) async {
-    final Database db = await database;
-    final List<Map<String, dynamic>> results = [];
-
-    // Build the base query parts based on where the search columns are found
-    for (int i = 0; i < searchColumns.length; i++) {
-      String column = searchColumns[i];
-      dynamic value = searchValues[i];
-
-      // Determine which table this column belongs to
-      String baseTable = _getTableForColumn(column);
-      if (baseTable.isEmpty) continue;
-
-      // Build the complete join query based on the table relationships
-      String query = _buildJoinQuery(baseTable);
-      
-      // Add the WHERE clause for the current search column
-      query += ' WHERE $column = ?';
-
-      try {
-        final List<Map<String, dynamic>> tableResults = await db.rawQuery(
-          query,
-          [value]
-        );
-
-        // Merge the results
-        for (var row in tableResults) {
-          results.add(row);
-        }
-      } catch (e) {
-        print('Error executing query: $e');
-        print('Query was: $query');
-        rethrow;
-      }
-    }
-
-    return results;
-  }
-
-  String _getTableForColumn(String column) {
-    if (column.startsWith('s_')) return 'Steinbruch';
-    if (column.startsWith('v_')) return 'Vormahlung';
-    if (column.startsWith('o_')) return 'Ofen';
-    if (column.startsWith('me_')) return 'MaterialEigenschaften';
-    if (column.startsWith('n_')) return 'Nachmahlung';
-    if (column.startsWith('mz_')) return 'MoertelZusammensetzung';
-    if (column.startsWith('b_')) return 'BetonZusammensetzung';
-    return '';
-  }
-
-  String _buildJoinQuery(String baseTable) {
-    // Define the relationships between tables
-    const relationships = {
-      'Steinbruch': 'LEFT JOIN Vormahlung ON Steinbruch.s_id = Vormahlung.steinbruch_id',
-      'Vormahlung': 'LEFT JOIN Ofen ON Vormahlung.v_id = Ofen.vormahlung_id',
-      'Ofen': 'LEFT JOIN MaterialEigenschaften ON Ofen.o_id = MaterialEigenschaften.ofen_id',
-      'MaterialEigenschaften': 'LEFT JOIN Nachmahlung ON MaterialEigenschaften.me_id = Nachmahlung.material_eigenschaften_id',
-      'Nachmahlung': 'LEFT JOIN MoertelZusammensetzung ON Nachmahlung.n_id = MoertelZusammensetzung.nachmahlung_id',
-      'MoertelZusammensetzung': 'LEFT JOIN BetonZusammensetzung ON MoertelZusammensetzung.mz_id = BetonZusammensetzung.moertel_zusammensetzung_id'
-    };
-
-    // Build the complete SELECT clause for all tables
-    String selectClause = '''
-      SELECT 
-        Steinbruch.*, 
-        Vormahlung.*, 
-        Ofen.*, 
-        MaterialEigenschaften.*, 
-        Nachmahlung.*, 
-        MoertelZusammensetzung.*, 
-        BetonZusammensetzung.*
-    ''';
-
-    // Start building the FROM clause with the base table
-    String fromClause = ' FROM $baseTable';
-
-    // Add appropriate joins based on the base table
-    switch (baseTable) {
-      case 'Steinbruch':
-        fromClause += '''
-          ${relationships['Steinbruch']}
-          ${relationships['Vormahlung']}
-          ${relationships['Ofen']}
-          ${relationships['MaterialEigenschaften']}
-          ${relationships['Nachmahlung']}
-          ${relationships['MoertelZusammensetzung']}
-          ${relationships['BetonZusammensetzung']}
-        ''';
-        break;
-      case 'Vormahlung':
-        fromClause += '''
-          LEFT JOIN Steinbruch ON Vormahlung.steinbruch_id = Steinbruch.s_id
-          ${relationships['Vormahlung']}
-          ${relationships['Ofen']}
-          ${relationships['MaterialEigenschaften']}
-          ${relationships['Nachmahlung']}
-          ${relationships['MoertelZusammensetzung']}
-          ${relationships['BetonZusammensetzung']}
-        ''';
-        break;
-      case 'Ofen':
-        fromClause += '''
-          LEFT JOIN Vormahlung ON Ofen.vormahlung_id = Vormahlung.v_id
-          LEFT JOIN Steinbruch ON Vormahlung.steinbruch_id = Steinbruch.s_id
-          ${relationships['Ofen']}
-          ${relationships['MaterialEigenschaften']}
-          ${relationships['Nachmahlung']}
-          ${relationships['MoertelZusammensetzung']}
-          ${relationships['BetonZusammensetzung']}
-        ''';
-        break;
-      // Add similar cases for other tables...
-    }
-
-    return selectClause + fromClause;
-  }
 }

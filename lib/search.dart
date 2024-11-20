@@ -128,7 +128,7 @@ Future<void> _performCrossTableSearch() async {
 
   // Collect selected search criteria
   _selectedFields.forEach((fieldName, isSelected) {
-    if (isSelected && _fieldControllers[fieldName]!.text.isNotEmpty) {
+    if (_fieldControllers[fieldName]!.text.isNotEmpty) {
       searchColumns.add(fieldName);
       dynamic value = _fieldControllers[fieldName]!.text;
 
@@ -155,9 +155,9 @@ if (_tableFields.values
   }
 
   try {
-    final results = await dbHelper.getJoinedData(
-      // searchColumns,
-      // searchValues,
+    final results = await dbHelper.searchJoinedData(
+      searchColumns: searchColumns,
+      searchValues: searchValues,
     );
 
     setState(() {
@@ -170,40 +170,39 @@ if (_tableFields.values
   }
 }
 
-// Update the _buildResultTable method to handle the joined results:
-Widget _buildResultTable() {
-  if (_searchResults.isEmpty) {
-    return Center(child: Text('Keine Ergebnisse gefunden'));
-  }
+// // Update the _buildResultTable method to handle the joined results:
+// Widget _buildResultTable() {
+//   if (_searchResults.isEmpty) {
+//     return Center(child: Text('Keine Ergebnisse gefunden'));
+//   }
 
-  // Get all possible columns from the results
-  Set<String> allColumns = {};
-  for (var result in _searchResults) {
-    allColumns.addAll(result.keys);
-  }
+//   // Get all possible columns from the results
+//   Set<String> allColumns = {};
+//   for (var result in _searchResults) {
+//     allColumns.addAll(result.keys);
+//   }
 
-  // Filter out null values and sort columns
-  List<String> displayColumns = allColumns
-    .where((col) => _searchResults.any((result) => result[col] != null))
-    .toList()
-    ..sort();
+//   // Filter out null values and sort columns
+//   List<String> displayColumns = allColumns
+//     .where((col) => _searchResults.any((result) => result[col] != null))
+//     .toList();
 
-  return SingleChildScrollView(
-    scrollDirection: Axis.horizontal,
-    child: DataTable(
-      columns: displayColumns.map((col) => DataColumn(
-        label: Text(_getDisplayLabel(col)),
-      )).toList(),
-      rows: _searchResults.map((result) {
-        return DataRow(
-          cells: displayColumns.map((col) => DataCell(
-            Text(result[col]?.toString() ?? 'N/A')
-          )).toList(),
-        );
-      }).toList(),
-    ),
-  );
-}
+//   return SingleChildScrollView(
+//     scrollDirection: Axis.horizontal,
+//     child: DataTable(
+//       columns: displayColumns.map((col) => DataColumn(
+//         label: Text(_getDisplayLabel(col)),
+//       )).toList(),
+//       rows: _searchResults.map((result) {
+//         return DataRow(
+//           cells: displayColumns.map((col) => DataCell(
+//             Text(result[col]?.toString() ?? 'N/A')
+//           )).toList(),
+//         );
+//       }).toList(),
+//     ),
+//   );
+// }
 
 String _getDisplayLabel(String columnName) {
   // Find the display label from _tableFields
@@ -268,37 +267,37 @@ String _getDisplayLabel(String columnName) {
     );
   }
 
-  // Widget _buildResultTable() {
-  //   if (_searchResults.isEmpty) {
-  //     return Center(child: Text('Keine Ergebnisse gefunden'));
-  //   }
+  Widget _buildResultTable() {
+    if (_searchResults.isEmpty) {
+      return Center(child: Text('Keine Ergebnisse gefunden'));
+    }
 
-  //   // Dynamically create columns based on the first result
-  //   final displayedColumns = _selectedFields.entries
-  //     .where((entry) => entry.value)
-  //     .map((entry) => entry.key)
-  //     .toList();
+    // Dynamically create columns based on the first result
+    final displayedColumns = _selectedFields.entries
+      .where((entry) => entry.value)
+      .map((entry) => entry.key)
+      .toList();
 
-  //   return SingleChildScrollView(
-  //     scrollDirection: Axis.horizontal,
-  //     child: DataTable(
-  //       columns: [
-  //         ...displayedColumns.map((col) =>
-  //           DataColumn(label: Text(col))
-  //         ).toList(),
-  //       ],
-  //       rows: _searchResults.map((result) {
-  //         return DataRow(
-  //           cells: [
-  //             ...displayedColumns.map((col) =>
-  //               DataCell(Text(result[col]?.toString() ?? 'N/A'))
-  //             ).toList(),
-  //           ],
-  //         );
-  //       }).toList(),
-  //     ),
-  //   );
-  // }
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: DataTable(
+        columns: [
+          ...displayedColumns.map((col) =>
+            DataColumn(label: Text(col))
+          ).toList(),
+        ],
+        rows: _searchResults.map((result) {
+          return DataRow(
+            cells: [
+              ...displayedColumns.map((col) =>
+                DataCell(Text(result[col]?.toString() ?? 'N/A'))
+              ).toList(),
+            ],
+          );
+        }).toList(),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {

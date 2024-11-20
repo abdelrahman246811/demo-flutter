@@ -1,6 +1,7 @@
   import 'package:flutter/material.dart';
   import 'package:provider/provider.dart';
   import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+  
 
   import 'package:application_demo/steinbruch.dart';
   import 'package:application_demo/vormahlung.dart';
@@ -16,7 +17,7 @@
       // Initialize FFI database factory
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
-    
+
     await databaseFactory.setDatabasesPath(await getDatabasesPath());
     runApp(MyApp());
   }

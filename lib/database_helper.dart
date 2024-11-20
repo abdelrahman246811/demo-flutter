@@ -529,4 +529,35 @@ Future<List<Map<String, dynamic>>> getJoinedData() async {
   ''');
 }
 
+Future<List<Map<String, dynamic>>> searchJoinedData({
+  required List<String> searchColumns,
+  required List<dynamic> searchValues
+}) async {
+  final db = await database;
+
+  if (searchColumns.length != searchValues.length) {
+    throw ArgumentError('Search columns and values must have equal length');
+  }
+
+  final where = searchColumns.map((column) => '$column = ?').join(' AND ');
+  return await db.rawQuery('''
+    SELECT
+        s.s_id, s.s_name, s.s_menge, s.s_korngroesse, s.s_asbest_analyse, s.s_dichte, s.s_transport,
+        v.v_id, v.v_charge, v.v_erledigt, v.v_muehle_typ, v.v_mahl_dauer, v.v_grad, v.v_dichte, v.v_feinheit,
+        o.o_id, o.o_charge, o.o_info, o.o_durchsatz, o.o_neigung, o.o_rotation, o.o_heiztemperatur, o.o_luftvolumen, o.o_faesser, o.o_gluehverlust,
+        me.me_id, me.me_charge, me.me_dichte, me.me_feinheit, me.me_dca, me.me_xrd,
+        n.n_id, n.n_charge, n.n_erledigt, n.n_muehle_typ, n.n_mahl_dauer, n.n_grad, n.n_dichte, n.n_feinheit, n.n_gluehverlust, n.n_dca, n.n_xrd,
+        mz.mz_id, mz.mz_serie, mz.mz_bindemittel, mz.mz_bindemittelgehalt, mz.mz_wasser, mz.mz_w_bm_wert, mz.mz_fliessmittel, mz.mz_druckfestigkeit_7d,
+        b.b_id, b.b_serie, b.b_bindemittel, b.b_bindemittelgehalt, b.b_wasser, b.b_w_bm_wert, b.b_fliessmittel, b.b_sieblinie, b.b_druckfestigkeit
+    FROM Steinbruch s
+    LEFT JOIN Vormahlung v ON s.s_id = v.steinbruch_id
+    LEFT JOIN Ofen o ON v.v_id = o.vormahlung_id
+    LEFT JOIN MaterialEigenschaften me ON o.o_id = me.ofen_id
+    LEFT JOIN Nachmahlung n ON me.me_id = n.material_eigenschaften_id
+    LEFT JOIN MoertelZusammensetzung mz ON n.n_id = mz.nachmahlung_id
+    LEFT JOIN BetonZusammensetzung b ON mz.mz_id = b.moertel_zusammensetzung_id
+    WHERE $where;
+  ''', searchValues);
+}
+
 }
